@@ -8,6 +8,12 @@ import numpy as np
 import torch
 
 
+def seed_worker(worker_id: int) -> None:
+    worker_seed = torch.initial_seed() % (2 ** 32)
+    np.random.seed(worker_seed)
+    random.seed(worker_seed)
+
+
 def set_seed(seed: int = 42):
     """
     Set all random seeds for reproducibility
@@ -24,11 +30,6 @@ def set_seed(seed: int = 42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     torch.use_deterministic_algorithms(False)
-
-    def seed_worker(worker_id: int) -> None:
-        worker_seed = torch.initial_seed() % (2 ** 32)
-        np.random.seed(worker_seed)
-        random.seed(worker_seed)
 
     g = torch.Generator()
     g.manual_seed(seed)

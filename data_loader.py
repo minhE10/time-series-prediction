@@ -63,28 +63,30 @@ class TimeSeriesDataset:
     def _load(self):
         df = pd.read_csv(self.path)
 
-        time_col = self.config["time_col"]
-        if isinstance(time_col, list):
-            df["datetime"] = pd.to_datetime(df[time_col])
-            df.drop(columns=time_col, inplace=True)
-        else:
-            if self.config.get("bitcoin_resample"):
-                df["datetime"] = pd.to_datetime(df[time_col], unit="s", errors="coerce")
-            else:
-                df["datetime"] = pd.to_datetime(df[time_col], errors="coerce")
-
-        df = df.dropna(subset=["datetime"]).sort_values("datetime").reset_index(drop=True)
+        for col in self.config.get("drop_cols", []):
+            if col in df.columns:
+                df.drop(columns=[col], inplace=True)
 
         for col in ["No", "station"]:
             if col in df.columns:
                 df.drop(columns=[col], inplace=True)
 
-        if self.config.get("bitcoin_resample"):
+        time_col = self.config["time_col"]
+        if isinstance(time_col, list):
+            df["datetime"] = pd.to_datetime(df[time_col])
+            df.drop(columns=time_col, inplace=True)
+        elif self.name == "bitcoin":
+            df["datetime"] = pd.to_datetime(df[time_col], unit="s", errors="coerce")
+        else:
+            df["datetime"] = pd.to_datetime(df[time_col], errors="coerce")
+
+        df = df.dropna(subset=["datetime"]).sort_values("datetime").reset_index(drop=True)
+
+        if self.name == "bitcoin":
             df.set_index("datetime", inplace=True)
             df = df.resample("1h").last().dropna(subset=["Open"])
             df.reset_index(inplace=True)
 
-        # Temporal features (sin/cos encoding)
         df["hour_sin"] = np.sin(2 * np.pi * df["datetime"].dt.hour / 24)
         df["hour_cos"] = np.cos(2 * np.pi * df["datetime"].dt.hour / 24)
         df["month_sin"] = np.sin(2 * np.pi * df["datetime"].dt.month / 12)
@@ -104,10 +106,6 @@ class TimeSeriesDataset:
             if c not in feature_cols:
                 feature_cols.append(c)
 
-        for c in ["hour_sin", "hour_cos", "month_sin", "month_cos"]:
-            if c not in feature_cols:
-                feature_cols.append(c)
-
         self.feature_cols = feature_cols
         self.target_cols = target_cols
         self.df = df
@@ -118,25 +116,28 @@ class TimeSeriesDataset:
         train_end = int(n * self.train_ratio)
         val_end = int(n * (self.train_ratio + self.val_ratio))
 
+        val_start = max(0, train_end - self.seq_len)
+        test_start = max(0, val_end - self.seq_len)
+
         def to_float(sub, cols):
             arr = sub[cols].apply(pd.to_numeric, errors="coerce").astype(np.float32)
             return arr.ffill().bfill().to_numpy()
 
         self.X_train = to_float(df.iloc[:train_end], self.feature_cols)
-        self.X_val = to_float(df.iloc[train_end:val_end], self.feature_cols)
-        self.X_test = to_float(df.iloc[val_end:], self.feature_cols)
+        self.X_val = to_float(df.iloc[val_start:val_end], self.feature_cols)
+        self.X_test = to_float(df.iloc[test_start:], self.feature_cols)
 
         self.y_train = to_float(df.iloc[:train_end], self.target_cols)
-        self.y_val = to_float(df.iloc[train_end:val_end], self.target_cols)
-        self.y_test = to_float(df.iloc[val_end:], self.target_cols)
+        self.y_val = to_float(df.iloc[val_start:val_end], self.target_cols)
+        self.y_test = to_float(df.iloc[test_start:], self.target_cols)
 
     def apply_scaling(self, scaler_type="standard"):
         if scaler_type == "standard":
             self.feature_scaler = StandardScaler()
-            self.target_scaler  = StandardScaler()
+            self.target_scaler = StandardScaler()
         elif scaler_type == "minmax":
             self.feature_scaler = MinMaxScaler()
-            self.target_scaler  = MinMaxScaler()
+            self.target_scaler = MinMaxScaler()
         else:
             raise ValueError("scaler_type must be 'standard' or 'minmax'.")
 

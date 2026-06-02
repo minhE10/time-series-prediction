@@ -20,16 +20,20 @@ def build_model(model_name: str,
 
     if model_name == "timemixer":
         from src.models.timemixer import TimeMixer
+        down_win = cfg["down_sampling_window"]
+        n_down = cfg["down_sampling_layers"]
+        coarsest = seq_len // (down_win ** n_down)        
+        moving_avg = max(5, min(cfg["moving_avg"], coarsest // 2))
         return TimeMixer(
             seq_len=seq_len, pred_len=pred_len,
             n_features=dataset.n_features, n_targets=dataset.n_targets,
             target_indices=dataset.target_indices,
             d_model=cfg["d_model"], d_ff=cfg["d_ff"], e_layers=cfg["e_layers"],
             dropout=cfg["dropout"],
-            down_sampling_layers=cfg["down_sampling_layers"],
-            down_sampling_window=cfg["down_sampling_window"],
+            down_sampling_layers=n_down,
+            down_sampling_window=down_win,
             down_sampling_method=cfg["down_sampling_method"],
-            decomp_method=cfg["decomp_method"], moving_avg=cfg["moving_avg"],
+            decomp_method=cfg["decomp_method"], moving_avg=moving_avg,
             top_k=cfg["top_k"], channel_independence=cfg["channel_independence"],
             use_norm=cfg["use_norm"],
         )

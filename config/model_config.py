@@ -4,6 +4,7 @@ MODEL_CONFIG = {
         "d": 0,
         "q": 3
     },
+
     "xgboost": {
         "n_estimators": 200,
         "learning_rate": 0.05,
@@ -14,21 +15,23 @@ MODEL_CONFIG = {
         "reg_lambda": 1.0,
         "reg_gamma": 0.0
     },
+
     "itransformer": {
-        "d_model": 64,
+        "d_model": 32,
         "n_heads": 4,
         "e_layers": 2,
-        "d_ff": 128,
-        "dropout": 0.1,
-        "learning_rate": 1e-3,
-        "weight_decay": 1e-4,
+        "d_ff": 64,
+        "dropout": 0.3,
+        "learning_rate": 5e-4,
+        "weight_decay": 1e-3,
         "batch_size": 32
     },
+
     "timemixer": {
-        "d_model": 64,
-        "d_ff": 128,
+        "d_model": 32,
+        "d_ff": 64,
         "e_layers": 2,
-        "dropout": 0.1,
+        "dropout": 0.3,
         "down_sampling_layers": 2,
         "down_sampling_window": 2,
         "down_sampling_method": "avg",
@@ -37,20 +40,21 @@ MODEL_CONFIG = {
         "top_k": 5,
         "channel_independence": False,
         "use_norm": True,
-        "learning_rate": 1e-3,
-        "weight_decay": 1e-4,
+        "learning_rate": 5e-4,
+        "weight_decay": 1e-3,
         "batch_size": 32
     },
+
     "tsmamba": {
-        "d_model": 64,
-        "d_state": 16,
+        "d_model": 32,
+        "d_state": 8,
         "d_conv": 4,
         "expand": 2,
-        "n_layers": 2,
+        "n_layers": 1,
         "patch_len": 8,
-        "dropout": 0.1,
-        "learning_rate": 1e-3,
-        "weight_decay": 1e-4,
+        "dropout": 0.3,
+        "learning_rate": 5e-4,
+        "weight_decay": 1e-3,
         "batch_size": 32
     }
 }

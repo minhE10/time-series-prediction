@@ -1,0 +1,10 @@
+# Local full datasets are too large for the Git remote.
+time-series-prediction-demo/data/raw/*.csv
+
+# Local archives/logs/cache.
+*.rar
+*.zip
+__pycache__/
+*.pyc
+time-series-prediction-demo/gradio.log
+time-series-prediction-demo/gradio.err.log

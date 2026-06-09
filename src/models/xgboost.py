@@ -28,7 +28,6 @@ class _Node:
             self.is_leaf = True
 
     def _find_split(self, g, h):
-        # h = 2.0 per sample (MSE), so H_cumsum[i] = 2*(i+1) — no cumsum needed for H
         n = len(g)
         G_total = g.sum()
         H_total = 2.0 * n
@@ -39,23 +38,19 @@ class _Node:
         feats = np.random.choice(n_feat, max(1, int(n_feat * self.colsample)), replace=False)
         n_try = len(feats)
 
-        # Sort all sampled features simultaneously — one argsort call instead of n_try
-        X_local  = self.X[self.idxs][:, feats]        # (n, n_try)
-        orders   = np.argsort(X_local, axis=0)         # (n, n_try)
+        X_local  = self.X[self.idxs][:, feats]       
+        orders   = np.argsort(X_local, axis=0)        
         col_idx  = np.arange(n_try)
-        X_sorted = X_local[orders, col_idx]            # (n, n_try)
+        X_sorted = X_local[orders, col_idx]           
 
-        # Cumulative GL for all features at once; GR by complement
-        GL = np.cumsum(g[orders], axis=0)[:-1]         # (n-1, n_try)
+        GL = np.cumsum(g[orders], axis=0)[:-1]       
         GR = G_total - GL
 
-        # HL/HR from constant H=2.0 — analytical, no cumsum
         counts = np.arange(1, n, dtype=np.float64)
-        HL = (2.0 * counts)[:, None]                   # (n-1, 1)  broadcasts over n_try
+        HL = (2.0 * counts)[:, None]                
         HR = (2.0 * (n - counts))[:, None]
 
-        # Mask: split must change value AND satisfy min_child_weight
-        ok = (X_sorted[:-1] != X_sorted[1:])           # (n-1, n_try)
+        ok = (X_sorted[:-1] != X_sorted[1:])        
         mw = self.min_child_weight
         ok &= (HL >= mw) & (HR >= mw)
 
@@ -85,7 +80,6 @@ class _XGBoostTree:
     def fit(self, X, gradient, hessian, max_depth, min_child_weight, reg_lambda, reg_gamma, colsample):
         root = _Node(0, np.arange(len(gradient)), gradient, hessian, X,
                      max_depth, min_child_weight, reg_lambda, reg_gamma, colsample)
-        # Flatten recursive tree into parallel arrays for O(depth) vectorized predict
         feat, thr, val, left, right, is_leaf = [], [], [], [], [], []
 
         def _build(node):
@@ -93,34 +87,37 @@ class _XGBoostTree:
             is_leaf.append(node.is_leaf)
             val.append(node.leaf_value)
             if node.is_leaf:
-                feat.append(-1); thr.append(0.0); left.append(-1); right.append(-1)
+                feat.append(-1)
+                thr.append(0.0)
+                left.append(-1)
+                right.append(-1)
             else:
-                feat.append(node.split_col); thr.append(node.split_val)
-                left.append(-1); right.append(-1)  # filled in below
+                feat.append(node.split_col)
+                thr.append(node.split_val)
+                left.append(-1)
+                right.append(-1) 
                 left[idx]  = _build(node.left)
                 right[idx] = _build(node.right)
             return idx
 
         _build(root)
-        self._feat    = np.array(feat,    dtype=np.int32)
-        self._thr     = np.array(thr,     dtype=np.float64)
-        self._val     = np.array(val,     dtype=np.float64)
-        self._left    = np.array(left,    dtype=np.int32)
-        self._right   = np.array(right,   dtype=np.int32)
+        self._feat = np.array(feat, dtype=np.int32)
+        self._thr = np.array(thr, dtype=np.float64)
+        self._val = np.array(val, dtype=np.float64)
+        self._left = np.array(left, dtype=np.int32)
+        self._right = np.array(right, dtype=np.int32)
         self._is_leaf = np.array(is_leaf, dtype=bool)
         return self
 
     def predict(self, X):
         n = len(X)
         nodes = np.zeros(n, dtype=np.int32)
-        # walk all rows simultaneously; each iteration = one tree level
         while True:
             at_leaf = self._is_leaf[nodes]
             if at_leaf.all():
                 break
             active = np.where(~at_leaf)[0]
             ni = nodes[active]
-            # fancy indexing: each active row picks its own split feature
             go_left = X[active, self._feat[ni]] <= self._thr[ni]
             nodes[active[go_left]]  = self._left[ni[go_left]]
             nodes[active[~go_left]] = self._right[ni[~go_left]]
@@ -147,10 +144,10 @@ class XGBoost:
         n = len(y_train)
         self.base_pred = float(y_train.mean())
 
-        pred_tr  = np.full(n, self.base_pred)
+        pred_tr = np.full(n, self.base_pred)
         pred_val = np.full(len(y_val), self.base_pred) if y_val is not None else None
 
-        self.trees   = []
+        self.trees = []
         self.history = {"train_loss": [], "val_loss": []}
 
         for i in range(n_estimators):

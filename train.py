@@ -128,11 +128,23 @@ class XGBoostTrainer:
     def fit(self, num_epochs=200, verbose=True, log_every=10):
         from src.models.xgboost import XGBoost, loader_to_numpy
 
-        X_tr, y_tr = loader_to_numpy(self.train_loader)
+        X_tr, y_tr   = loader_to_numpy(self.train_loader)
         X_val, y_val = loader_to_numpy(self.val_loader)
 
-        y_tr_1d = y_tr[:, -1, :]
-        y_val_1d = y_val[:, -1, :]
+        y_tr_1d  = y_tr[:, -1, :]   # (n_tr,  n_targets)
+        y_val_1d = y_val[:, -1, :]  # (n_val, n_targets)
+
+        # Train on delta = (future - last_observed) so tree models don't need to
+        # extrapolate absolute price levels, only predict changes (stationary).
+        n_feat  = self.dataset.n_features
+        seq_len = self.dataset.seq_len
+        t_idxs  = self.dataset.target_indices   # feature-col index per target
+        anchor_cols = [(seq_len - 1) * n_feat + ti for ti in t_idxs]
+        last_tr  = X_tr[:, anchor_cols]   # (n_tr,  n_targets)
+        last_val = X_val[:, anchor_cols]  # (n_val, n_targets)
+
+        delta_tr  = y_tr_1d  - last_tr
+        delta_val = y_val_1d - last_val
 
         histories, self.models = [], []
         for i, col in enumerate(self.dataset.target_cols):
@@ -143,15 +155,15 @@ class XGBoostTrainer:
                 learning_rate=t.learning_rate, max_depth=t.max_depth,
                 min_child_weight=t.min_child_weight, subsample=t.subsample,
                 colsample=t.colsample, reg_lambda=t.reg_lambda, reg_gamma=t.reg_gamma,
-            ).fit(X_tr, y_tr_1d[:, i], n_estimators=num_epochs,
-                  X_val=X_val, y_val=y_val_1d[:, i], log_every=log_every)
+            ).fit(X_tr, delta_tr[:, i], n_estimators=num_epochs,
+                  X_val=X_val, y_val=delta_val[:, i], log_every=log_every)
             self.models.append(m)
             histories.append(m.history)
 
         n_pts = len(histories[0]["train_loss"])
         self.history = {
             "train_loss": [np.mean([h["train_loss"][j] for h in histories]) for j in range(n_pts)],
-            "val_loss": [np.mean([h["val_loss"][j] for h in histories]) for j in range(n_pts)],
+            "val_loss":   [np.mean([h["val_loss"][j]   for h in histories]) for j in range(n_pts)],
         }
         best_val = min(self.history["val_loss"])
         print(f"Best val MSE: {best_val:.6f}")
@@ -161,11 +173,19 @@ class XGBoostTrainer:
         from src.models.xgboost import loader_to_numpy
         ldr = loader or self.test_loader
         X, y_true_raw = loader_to_numpy(ldr)
-        preds = np.column_stack([m.predict(X) for m in self.models])
+
+        n_feat  = self.dataset.n_features
+        seq_len = self.dataset.seq_len
+        t_idxs  = self.dataset.target_indices
+        anchor_cols = [(seq_len - 1) * n_feat + ti for ti in t_idxs]
+        last = X[:, anchor_cols]  # (n, n_targets)
+
+        # delta + anchor → absolute prediction in scaled space
+        preds  = np.column_stack([m.predict(X) for m in self.models]) + last
         y_true = y_true_raw[:, -1, :]
 
         if self.dataset.is_scaled:
-            preds = self.dataset.inverse_transform_target(preds[:, np.newaxis, :])[:, 0, :]
+            preds  = self.dataset.inverse_transform_target(preds[:, np.newaxis, :])[:, 0, :]
             y_true = self.dataset.inverse_transform_target(y_true[:, np.newaxis, :])[:, 0, :]
         return y_true, preds
 

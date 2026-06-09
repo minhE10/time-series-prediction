@@ -1,8 +1,13 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import seaborn as sns
 
-sns.set_theme(style="whitegrid")
+try:
+    import seaborn as sns
+except ImportError:
+    sns = None
+
+if sns is not None:
+    sns.set_theme(style="whitegrid")
 
 
 def plot_loss(history, title="Training & Validation Loss", save_path=None):
@@ -30,9 +35,10 @@ def plot_predictions(y_true,
                      target_cols,
                      n_samples=500,
                      title="Predictions vs Ground Truth",
-                     save_path=None):
-    y_true = np.array(y_true).reshape(-1, len(target_cols))
-    y_pred = np.array(y_pred).reshape(-1, len(target_cols))
+                     save_path=None,
+                     mode="non_overlapping"):
+    y_true = _prediction_timeline(y_true, len(target_cols), mode=mode)
+    y_pred = _prediction_timeline(y_pred, len(target_cols), mode=mode)
 
     n = min(n_samples, len(y_true))
     y_true = y_true[:n]
@@ -58,10 +64,30 @@ def plot_predictions(y_true,
     plt.show()
 
 
-def plot_predictions_from_trainer(trainer, loader=None, n_samples=500, title=None, save_path=None):
+def _prediction_timeline(values, n_targets, mode="non_overlapping"):
+    values = np.asarray(values)
+    if values.ndim == 2:
+        return values.reshape(-1, n_targets)
+    if values.ndim != 3:
+        return values.reshape(-1, n_targets)
+
+    if mode == "flatten":
+        return values.reshape(-1, n_targets)
+    if mode == "last_step":
+        return values[:, -1, :]
+    if mode == "first_step":
+        return values[:, 0, :]
+    if mode == "non_overlapping":
+        pred_len = values.shape[1]
+        return values[::pred_len].reshape(-1, n_targets)
+    raise ValueError("mode must be one of: non_overlapping, last_step, first_step, flatten")
+
+
+def plot_predictions_from_trainer(trainer, loader=None, n_samples=500, title=None, save_path=None,
+                                  mode="non_overlapping"):
     if loader is None:
         loader = trainer.test_loader
     y_true, y_pred = trainer.predict(loader)
     plot_title = title or f"Predictions vs Ground Truth ({trainer.dataset.name})"
     plot_predictions(y_true, y_pred, trainer.dataset.target_cols, n_samples=n_samples,
-                     title=plot_title, save_path=save_path)
+                     title=plot_title, save_path=save_path, mode=mode)

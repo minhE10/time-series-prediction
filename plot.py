@@ -13,13 +13,14 @@ if sns is not None:
 def plot_loss(history, title="Training & Validation Loss", save_path=None):
     train_loss = history["train_loss"]
     val_loss = history["val_loss"]
+    selection_label = history.get("selection_name", "Val")
     epochs = range(1, len(train_loss) + 1)
 
     fig, ax = plt.subplots(figsize=(10, 5))
     ax.plot(epochs, train_loss, label="Train Loss", color="#1f77b4", linewidth=1.5)
-    ax.plot(epochs, val_loss, label="Val Loss", color="#ff7f0e", linewidth=1.5)
+    ax.plot(epochs, val_loss, label=f"{selection_label} Loss", color="#ff7f0e", linewidth=1.5)
     best_epoch = int(np.argmin(val_loss)) + 1
-    ax.axvline(best_epoch, linestyle="--", color="gray", alpha=0.7, label=f"Best Val @ epoch {best_epoch}")
+    ax.axvline(best_epoch, linestyle="--", color="gray", alpha=0.7, label=f"Best {selection_label} @ epoch {best_epoch}")
     ax.set_xlabel("Epoch")
     ax.set_ylabel("Loss (MSE)")
     ax.set_title(title)

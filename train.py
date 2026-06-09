@@ -23,7 +23,7 @@ class Trainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
-        self.criterion = criterion if criterion is not None else nn.MSELoss()
+        self.criterion = criterion if criterion is not None else nn.HuberLoss()
         self.optimizer = optimizer if optimizer is not None else torch.optim.AdamW(
             model.parameters(), lr=1e-3, weight_decay=1e-4
         )
@@ -72,8 +72,13 @@ class Trainer:
             y_true = self.dataset.inverse_transform_target(y_true)
         return y_true, y_pred
 
-    def fit(self, num_epochs=200, verbose=True, log_every=10):
+    def fit(self, num_epochs=200, verbose=True, log_every=10, patience=20):
+        if self.scheduler is None:
+            self.scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(
+                self.optimizer, T_max=num_epochs, eta_min=1e-6
+            )
         best_val = float("inf")
+        no_improve = 0
         for epoch in range(1, num_epochs + 1):
             train_loss = self._train_epoch()
             val_loss = self._eval_loss(self.val_loader)
@@ -90,6 +95,13 @@ class Trainer:
             if val_loss < best_val:
                 best_val = val_loss
                 self.best_state = copy.deepcopy(self.model.state_dict())
+                no_improve = 0
+            else:
+                no_improve += 1
+                if patience and no_improve >= patience:
+                    if verbose:
+                        print(f"Early stopping at epoch {epoch} (no improvement for {patience} epochs)")
+                    break
 
             if verbose and epoch % log_every == 0:
                 lr = self.optimizer.param_groups[0]["lr"]

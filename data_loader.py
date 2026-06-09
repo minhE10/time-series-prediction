@@ -8,18 +8,22 @@ from config.data_config import DATASET_CONFIG
 
 
 class TSWindowDataset(Dataset):
-    def __init__(self, feature_arr, target_arr, seq_len, pred_len):
+    def __init__(self, feature_arr, target_arr, seq_len, pred_len, augment=False):
         self.X = torch.tensor(feature_arr, dtype=torch.float32)
         self.y = torch.tensor(target_arr, dtype=torch.float32)
         self.seq_len = seq_len
         self.pred_len = pred_len
+        self.augment = augment
 
     def __len__(self):
         return len(self.X) - self.seq_len - self.pred_len + 1
 
     def __getitem__(self, idx):
-        x = self.X[idx: idx + self.seq_len]
+        x = self.X[idx: idx + self.seq_len].clone()
         y = self.y[idx + self.seq_len: idx + self.seq_len + self.pred_len]
+        if self.augment:
+            x = x + torch.randn_like(x) * 0.01
+            x = x * (0.9 + torch.rand(1).item() * 0.2)
         return x, y
 
 
@@ -34,7 +38,8 @@ class TimeSeriesDataset:
                  batch_size=32,
                  num_workers=0,
                  worker_init_fn=None,
-                 generator=None):
+                 generator=None,
+                 augment=False):
         if name not in DATASET_CONFIG:
             raise ValueError(f"Dataset '{name}' not in DATASET_CONFIG")
 
@@ -49,6 +54,7 @@ class TimeSeriesDataset:
         self.num_workers = num_workers
         self.worker_init_fn = worker_init_fn
         self.generator = generator
+        self.augment = augment
 
         self.feature_cols = None
         self.target_cols = None
@@ -124,19 +130,32 @@ class TimeSeriesDataset:
             .fillna(0.0)
         )
 
-        def to_float(sub, cols):
-            arr = sub[cols].apply(pd.to_numeric, errors="coerce").astype(np.float32)
-            return arr.ffill().fillna(train_fill[cols]).to_numpy()
+        # ffill on the full DataFrame so val/test slices inherit the last valid
+        # value from the preceding split instead of falling back to train median.
+        filled = (
+            df[fill_cols]
+            .apply(pd.to_numeric, errors="coerce")
+            .ffill()
+            .fillna(train_fill)
+            .astype(np.float32)
+        )
 
-        self.X_train = to_float(df.iloc[:train_end], self.feature_cols)
-        self.X_val = to_float(df.iloc[val_start:val_end], self.feature_cols)
-        self.X_test = to_float(df.iloc[test_start:], self.feature_cols)
+        def to_float(row_slice, cols):
+            return filled.iloc[row_slice][cols].to_numpy()
 
-        self.y_train = to_float(df.iloc[:train_end], self.target_cols)
-        self.y_val = to_float(df.iloc[val_start:val_end], self.target_cols)
-        self.y_test = to_float(df.iloc[test_start:], self.target_cols)
+        self.X_train = to_float(slice(None, train_end), self.feature_cols)
+        self.X_val   = to_float(slice(val_start, val_end), self.feature_cols)
+        self.X_test  = to_float(slice(test_start, None), self.feature_cols)
+
+        self.y_train = to_float(slice(None, train_end), self.target_cols)
+        self.y_val   = to_float(slice(val_start, val_end), self.target_cols)
+        self.y_test  = to_float(slice(test_start, None), self.target_cols)
 
     def apply_scaling(self, scaler_type="standard"):
+        if self.is_scaled:
+            return
+        if scaler_type in (None, "none"):
+            return
         if scaler_type == "standard":
             self.feature_scaler = StandardScaler()
             self.target_scaler = StandardScaler()
@@ -144,7 +163,7 @@ class TimeSeriesDataset:
             self.feature_scaler = MinMaxScaler()
             self.target_scaler = MinMaxScaler()
         else:
-            raise ValueError("scaler_type must be 'standard' or 'minmax'.")
+            raise ValueError("scaler_type must be 'standard', 'minmax', or 'none'.")
 
         self.X_train = self.feature_scaler.fit_transform(self.X_train)
         self.X_val = self.feature_scaler.transform(self.X_val)
@@ -168,9 +187,9 @@ class TimeSeriesDataset:
         ).reshape(shape)
 
     def _make_datasets(self):
-        self.train_dataset = TSWindowDataset(self.X_train, self.y_train, self.seq_len, self.pred_len)
-        self.val_dataset = TSWindowDataset(self.X_val,   self.y_val,   self.seq_len, self.pred_len)
-        self.test_dataset = TSWindowDataset(self.X_test,  self.y_test,  self.seq_len, self.pred_len)
+        self.train_dataset = TSWindowDataset(self.X_train, self.y_train, self.seq_len, self.pred_len, augment=self.augment)
+        self.val_dataset   = TSWindowDataset(self.X_val,   self.y_val,   self.seq_len, self.pred_len)
+        self.test_dataset  = TSWindowDataset(self.X_test,  self.y_test,  self.seq_len, self.pred_len)
 
     def get_loaders(self):
         kw = dict(

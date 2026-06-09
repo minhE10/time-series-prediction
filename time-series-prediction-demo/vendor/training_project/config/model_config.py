@@ -36,7 +36,7 @@ MODEL_CONFIG = {
         "down_sampling_window": 2,
         "down_sampling_method": "avg",
         "decomp_method": "moving_avg",
-        "moving_avg": 25,
+        "moving_avg": 6,
         "top_k": 5,
         "channel_independence": False,
         "use_norm": True,

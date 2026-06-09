@@ -135,9 +135,8 @@ class TSMamba(nn.Module):
 
         self.norm = nn.LayerNorm(d_model)
 
-        self.head = nn.Sequential(
-            nn.Linear(n_patches * d_model, pred_len * self.n_targets),
-        )
+        self.head_drop = nn.Dropout(dropout)
+        self.head = nn.Linear(n_patches * d_model, pred_len * self.n_targets)
 
     def _encode(self, x):
         h = x
@@ -168,8 +167,8 @@ class TSMamba(nn.Module):
         h_bwd = self._encode_bwd(h)
         h = self.norm(h_fwd + h_bwd)                                 
 
-        h_flat = h.reshape(B, -1)                                 
-        out = self.head(h_flat)                                      
+        h_flat = h.reshape(B, -1)
+        out = self.head(self.head_drop(h_flat))
         out = out.reshape(B, self.pred_len, self.n_targets)
 
         if self.use_revin:

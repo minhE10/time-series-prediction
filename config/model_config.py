@@ -17,13 +17,13 @@ MODEL_CONFIG = {
     },
 
     "itransformer": {
-        "d_model": 64,
+        "d_model": 32,
         "n_heads": 4,
-        "e_layers": 3,
-        "d_ff": 128,
+        "e_layers": 2,
+        "d_ff": 64,
         "dropout": 0.2,
         "learning_rate": 5e-4,
-        "weight_decay": 1e-4,
+        "weight_decay": 1e-3,
         "batch_size": 32
     },
 
@@ -36,7 +36,7 @@ MODEL_CONFIG = {
         "down_sampling_window": 2,
         "down_sampling_method": "avg",
         "decomp_method": "moving_avg",
-        "moving_avg": 25,
+        "moving_avg": 6,
         "top_k": 5,
         "channel_independence": False,
         "use_norm": True,

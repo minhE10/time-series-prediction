@@ -78,13 +78,10 @@ def build_trainer(model_name: str,
         optimizer = torch.optim.AdamW(
             model.parameters(), lr=cfg["learning_rate"], weight_decay=cfg["weight_decay"]
         )
-        scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
-            optimizer, mode="min", factor=0.5, patience=5
-        )
         return Trainer(
             model=model, dataset=dataset,
             train_loader=train_loader, val_loader=val_loader, test_loader=test_loader,
-            optimizer=optimizer, scheduler=scheduler, device=device,
+            optimizer=optimizer, device=device,
         )
 
     if model_name == "xgboost":

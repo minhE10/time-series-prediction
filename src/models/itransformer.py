@@ -33,7 +33,6 @@ class FeedForward(nn.Module):
             nn.GELU(),
             nn.Dropout(dropout),
             nn.Linear(d_ff, d_model),
-            nn.Dropout(dropout),
         )
 
     def forward(self, x):
@@ -53,7 +52,7 @@ class EncoderBlock(nn.Module):
         # x: (B, N, d_model)
         attn_out, _ = self.attn(x, x, x)
         x = self.norm1(x + self.drop(attn_out))
-        x = self.norm2(x + self.ff(x))
+        x = self.norm2(x + self.drop(self.ff(x)))
         return x
 
 

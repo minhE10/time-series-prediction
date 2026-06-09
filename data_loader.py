@@ -131,12 +131,10 @@ class TimeSeriesDataset:
         self.X_train = to_float(df.iloc[:train_end], self.feature_cols)
         self.X_val = to_float(df.iloc[val_start:val_end], self.feature_cols)
         self.X_test = to_float(df.iloc[test_start:], self.feature_cols)
-        self.X_all = to_float(df, self.feature_cols)
 
         self.y_train = to_float(df.iloc[:train_end], self.target_cols)
         self.y_val = to_float(df.iloc[val_start:val_end], self.target_cols)
         self.y_test = to_float(df.iloc[test_start:], self.target_cols)
-        self.y_all = to_float(df, self.target_cols)
 
     def apply_scaling(self, scaler_type="standard"):
         if scaler_type == "standard":
@@ -151,12 +149,10 @@ class TimeSeriesDataset:
         self.X_train = self.feature_scaler.fit_transform(self.X_train)
         self.X_val = self.feature_scaler.transform(self.X_val)
         self.X_test = self.feature_scaler.transform(self.X_test)
-        self.X_all = self.feature_scaler.transform(self.X_all)
 
         self.y_train = self.target_scaler.fit_transform(self.y_train)
         self.y_val = self.target_scaler.transform(self.y_val)
         self.y_test = self.target_scaler.transform(self.y_test)
-        self.y_all = self.target_scaler.transform(self.y_all)
 
         self.is_scaled = True
         self._make_datasets()
@@ -175,7 +171,6 @@ class TimeSeriesDataset:
         self.train_dataset = TSWindowDataset(self.X_train, self.y_train, self.seq_len, self.pred_len)
         self.val_dataset = TSWindowDataset(self.X_val,   self.y_val,   self.seq_len, self.pred_len)
         self.test_dataset = TSWindowDataset(self.X_test,  self.y_test,  self.seq_len, self.pred_len)
-        self.full_dataset = TSWindowDataset(self.X_all, self.y_all, self.seq_len, self.pred_len)
 
     def get_loaders(self):
         kw = dict(
@@ -187,14 +182,6 @@ class TimeSeriesDataset:
         val_loader = DataLoader(self.val_dataset,   batch_size=self.batch_size, shuffle=False, **kw)
         test_loader = DataLoader(self.test_dataset,  batch_size=self.batch_size, shuffle=False, **kw)
         return train_loader, val_loader, test_loader
-
-    def get_full_train_loader(self):
-        kw = dict(
-            num_workers=self.num_workers,
-            worker_init_fn=self.worker_init_fn,
-            generator=self.generator,
-        )
-        return DataLoader(self.full_dataset, batch_size=self.batch_size, shuffle=True, **kw)
 
     @property
     def n_features(self):

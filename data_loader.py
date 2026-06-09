@@ -130,19 +130,32 @@ class TimeSeriesDataset:
             .fillna(0.0)
         )
 
-        def to_float(sub, cols):
-            arr = sub[cols].apply(pd.to_numeric, errors="coerce").astype(np.float32)
-            return arr.ffill().fillna(train_fill[cols]).to_numpy()
+        # ffill on the full DataFrame so val/test slices inherit the last valid
+        # value from the preceding split instead of falling back to train median.
+        filled = (
+            df[fill_cols]
+            .apply(pd.to_numeric, errors="coerce")
+            .ffill()
+            .fillna(train_fill)
+            .astype(np.float32)
+        )
 
-        self.X_train = to_float(df.iloc[:train_end], self.feature_cols)
-        self.X_val = to_float(df.iloc[val_start:val_end], self.feature_cols)
-        self.X_test = to_float(df.iloc[test_start:], self.feature_cols)
+        def to_float(row_slice, cols):
+            return filled.iloc[row_slice][cols].to_numpy()
 
-        self.y_train = to_float(df.iloc[:train_end], self.target_cols)
-        self.y_val = to_float(df.iloc[val_start:val_end], self.target_cols)
-        self.y_test = to_float(df.iloc[test_start:], self.target_cols)
+        self.X_train = to_float(slice(None, train_end), self.feature_cols)
+        self.X_val   = to_float(slice(val_start, val_end), self.feature_cols)
+        self.X_test  = to_float(slice(test_start, None), self.feature_cols)
+
+        self.y_train = to_float(slice(None, train_end), self.target_cols)
+        self.y_val   = to_float(slice(val_start, val_end), self.target_cols)
+        self.y_test  = to_float(slice(test_start, None), self.target_cols)
 
     def apply_scaling(self, scaler_type="standard"):
+        if self.is_scaled:
+            return
+        if scaler_type in (None, "none"):
+            return
         if scaler_type == "standard":
             self.feature_scaler = StandardScaler()
             self.target_scaler = StandardScaler()
@@ -150,7 +163,7 @@ class TimeSeriesDataset:
             self.feature_scaler = MinMaxScaler()
             self.target_scaler = MinMaxScaler()
         else:
-            raise ValueError("scaler_type must be 'standard' or 'minmax'.")
+            raise ValueError("scaler_type must be 'standard', 'minmax', or 'none'.")
 
         self.X_train = self.feature_scaler.fit_transform(self.X_train)
         self.X_val = self.feature_scaler.transform(self.X_val)

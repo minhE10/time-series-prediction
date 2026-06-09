@@ -102,7 +102,6 @@ class PastDecomposableMixing(nn.Module):
         else:
             raise ValueError(f"decomp_method '{decomp_method}' not valid.")
 
-        self.norm = nn.LayerNorm(d_model)
         self.drop = nn.Dropout(dropout)
 
         if not channel_independence:

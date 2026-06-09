@@ -33,7 +33,6 @@ class FeedForward(nn.Module):
             nn.GELU(),
             nn.Dropout(dropout),
             nn.Linear(d_ff, d_model),
-            nn.Dropout(dropout),
         )
 
     def forward(self, x):

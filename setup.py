@@ -15,9 +15,6 @@ def seed_worker(worker_id: int) -> None:
 
 
 def set_seed(seed: int = 42):
-    """
-    Set all random seeds for reproducibility
-    """
     os.environ["PYTHONHASHSEED"] = str(seed)
     os.environ["CUBLAS_WORKSPACE_CONFIG"] = ":4096:8"
     warnings.filterwarnings("ignore")
@@ -40,9 +37,6 @@ def set_seed(seed: int = 42):
 
 
 def clear_memory():
-    """
-    Free CPU and GPU memory
-    """
     gc.collect()
     if torch.cuda.is_available():
         torch.cuda.empty_cache()

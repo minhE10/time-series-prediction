@@ -7,17 +7,7 @@ from evaluate import compute_metrics_per_target, print_metrics
 
 
 class Trainer:
-    def __init__(self,
-                 model,
-                 dataset,
-                 train_loader,
-                 val_loader,
-                 test_loader,
-                 criterion=None,
-                 optimizer=None,
-                 scheduler=None,
-                 device="cpu",
-                 grad_clip=1.0):
+    def __init__(self, model, dataset, train_loader, val_loader, test_loader, criterion=None, optimizer=None, scheduler=None, device="cpu", grad_clip=1.0):
         self.model = model.to(device)
         self.dataset = dataset
         self.train_loader = train_loader
@@ -44,7 +34,9 @@ class Trainer:
             if self.grad_clip:
                 nn.utils.clip_grad_norm_(self.model.parameters(), self.grad_clip)
             self.optimizer.step()
-            bs = X.size(0); total += loss.item() * bs; n += bs
+            bs = X.size(0)
+            total += loss.item() * bs
+            n += bs
         return total / n
 
     @torch.no_grad()
@@ -54,7 +46,9 @@ class Trainer:
         for X, y in loader:
             X, y = X.to(self.device), y.to(self.device)
             loss = self.criterion(self.model(X), y)
-            bs = X.size(0); total += loss.item() * bs; n += bs
+            bs = X.size(0)
+            total += loss.item() * bs
+            n += bs
         return total / n
 
     @torch.no_grad()
@@ -134,11 +128,10 @@ class XGBoostTrainer:
     def fit(self, num_epochs=200, verbose=True, log_every=10):
         from src.models.xgboost import XGBoost, loader_to_numpy
 
-        X_tr,  y_tr  = loader_to_numpy(self.train_loader)  
+        X_tr, y_tr = loader_to_numpy(self.train_loader)
         X_val, y_val = loader_to_numpy(self.val_loader)
 
-        # Predict the last step of the pred window
-        y_tr_1d  = y_tr[:, -1, :]  
+        y_tr_1d = y_tr[:, -1, :]
         y_val_1d = y_val[:, -1, :]
 
         histories, self.models = [], []
@@ -158,7 +151,7 @@ class XGBoostTrainer:
         n_pts = len(histories[0]["train_loss"])
         self.history = {
             "train_loss": [np.mean([h["train_loss"][j] for h in histories]) for j in range(n_pts)],
-            "val_loss": [np.mean([h["val_loss"][j]   for h in histories]) for j in range(n_pts)],
+            "val_loss": [np.mean([h["val_loss"][j] for h in histories]) for j in range(n_pts)],
         }
         best_val = min(self.history["val_loss"])
         print(f"Best val MSE: {best_val:.6f}")
@@ -167,9 +160,9 @@ class XGBoostTrainer:
     def predict(self, loader=None):
         from src.models.xgboost import loader_to_numpy
         ldr = loader or self.test_loader
-        X, y_true_raw = loader_to_numpy(ldr)                  
-        preds = np.column_stack([m.predict(X) for m in self.models]) 
-        y_true = y_true_raw[:, -1, :]                               
+        X, y_true_raw = loader_to_numpy(ldr)
+        preds = np.column_stack([m.predict(X) for m in self.models])
+        y_true = y_true_raw[:, -1, :]
 
         if self.dataset.is_scaled:
             preds = self.dataset.inverse_transform_target(preds[:, np.newaxis, :])[:, 0, :]
@@ -189,7 +182,9 @@ class ARIMATrainer:
         self.train_loader = train_loader
         self.val_loader = val_loader
         self.test_loader = test_loader
-        self.p = p; self.d = d; self.q = q
+        self.p = p
+        self.d = d
+        self.q = q
         self.forecaster = None
         self.history = {"train_loss": [], "val_loss": []}
 
@@ -200,16 +195,14 @@ class ARIMATrainer:
         )
         self.forecaster.fit_all(verbose=verbose)
 
-        y_true_val, y_pred_val = self.forecaster.predict_rolling(
-            self.dataset.X_val, self.dataset.y_val
-        )
+        y_true_val, y_pred_val = self.forecaster.predict_rolling(self.dataset.y_val)
         val_loss = float(np.mean((y_true_val - y_pred_val) ** 2))
         self.history = {"train_loss": [val_loss], "val_loss": [val_loss]}
         print(f"Done. Val MSE: {val_loss:.6f}")
         return self.history
 
     def predict(self, loader=None):
-        return self.forecaster.predict_rolling(self.dataset.X_test, self.dataset.y_test)
+        return self.forecaster.predict_rolling(self.dataset.y_test)
 
     def evaluate(self, loader=None, scaled=False, title="ARIMA TEST"):
         y_true, y_pred = self.predict()

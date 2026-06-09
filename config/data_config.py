@@ -45,8 +45,8 @@ DATASET_CONFIG = {
     },
 
     "bitcoin": {
-        "time_col": "Timestamp",  
-        "feature_cols": ["Open"],  
+        "time_col": "Timestamp",
+        "feature_cols": ["Open"],
         "target_cols": ["Open"]
     }
 }

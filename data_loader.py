@@ -28,18 +28,7 @@ class TSWindowDataset(Dataset):
 
 
 class TimeSeriesDataset:
-    def __init__(self,
-                 name,
-                 path,
-                 seq_len=48,
-                 pred_len=24,
-                 train_ratio=0.7,
-                 val_ratio=0.2,
-                 batch_size=32,
-                 num_workers=0,
-                 worker_init_fn=None,
-                 generator=None,
-                 augment=False):
+    def __init__(self, name, path, seq_len=48, pred_len=24, train_ratio=0.7, val_ratio=0.2, batch_size=32, num_workers=0, worker_init_fn=None, generator=None, augment=False):
         if name not in DATASET_CONFIG:
             raise ValueError(f"Dataset '{name}' not in DATASET_CONFIG")
 
@@ -130,8 +119,6 @@ class TimeSeriesDataset:
             .fillna(0.0)
         )
 
-        # ffill on the full DataFrame so val/test slices inherit the last valid
-        # value from the preceding split instead of falling back to train median.
         filled = (
             df[fill_cols]
             .apply(pd.to_numeric, errors="coerce")
@@ -144,12 +131,12 @@ class TimeSeriesDataset:
             return filled.iloc[row_slice][cols].to_numpy()
 
         self.X_train = to_float(slice(None, train_end), self.feature_cols)
-        self.X_val   = to_float(slice(val_start, val_end), self.feature_cols)
-        self.X_test  = to_float(slice(test_start, None), self.feature_cols)
+        self.X_val = to_float(slice(val_start, val_end), self.feature_cols)
+        self.X_test = to_float(slice(test_start, None), self.feature_cols)
 
         self.y_train = to_float(slice(None, train_end), self.target_cols)
-        self.y_val   = to_float(slice(val_start, val_end), self.target_cols)
-        self.y_test  = to_float(slice(test_start, None), self.target_cols)
+        self.y_val = to_float(slice(val_start, val_end), self.target_cols)
+        self.y_test = to_float(slice(test_start, None), self.target_cols)
 
     def apply_scaling(self, scaler_type="standard"):
         if self.is_scaled:
@@ -188,8 +175,8 @@ class TimeSeriesDataset:
 
     def _make_datasets(self):
         self.train_dataset = TSWindowDataset(self.X_train, self.y_train, self.seq_len, self.pred_len, augment=self.augment)
-        self.val_dataset   = TSWindowDataset(self.X_val,   self.y_val,   self.seq_len, self.pred_len)
-        self.test_dataset  = TSWindowDataset(self.X_test,  self.y_test,  self.seq_len, self.pred_len)
+        self.val_dataset = TSWindowDataset(self.X_val, self.y_val, self.seq_len, self.pred_len)
+        self.test_dataset = TSWindowDataset(self.X_test, self.y_test, self.seq_len, self.pred_len)
 
     def get_loaders(self):
         kw = dict(
@@ -197,9 +184,9 @@ class TimeSeriesDataset:
             worker_init_fn=self.worker_init_fn,
             generator=self.generator,
         )
-        train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True,  **kw)
-        val_loader = DataLoader(self.val_dataset,   batch_size=self.batch_size, shuffle=False, **kw)
-        test_loader = DataLoader(self.test_dataset,  batch_size=self.batch_size, shuffle=False, **kw)
+        train_loader = DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, **kw)
+        val_loader = DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, **kw)
+        test_loader = DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, **kw)
         return train_loader, val_loader, test_loader
 
     @property

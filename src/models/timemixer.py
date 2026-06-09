@@ -9,7 +9,6 @@ class MovingAvg(nn.Module):
         self.avg = nn.AvgPool1d(kernel_size=kernel_size, stride=stride, padding=0)
 
     def forward(self, x):
-        # x: (B, L, C)
         pad = (self.kernel_size - 1) // 2
         front = x[:, :1, :].repeat(1, pad, 1)
         back = x[:, -1:, :].repeat(1, self.kernel_size - 1 - pad, 1)
@@ -90,8 +89,7 @@ class MultiScaleTrendMixing(nn.Module):
 
 
 class PastDecomposableMixing(nn.Module):
-    def __init__(self, seq_len, d_model, d_ff, dropout, down_window, n_down_layers,
-                 decomp_method="moving_avg", moving_avg=25, top_k=5, channel_independence=False):
+    def __init__(self, seq_len, d_model, d_ff, dropout, down_window, n_down_layers, decomp_method="moving_avg", moving_avg=25, top_k=5, channel_independence=False):
         super().__init__()
         self.channel_independence = channel_independence
 
@@ -165,24 +163,7 @@ class Normalize(nn.Module):
 
 
 class TimeMixer(nn.Module):
-    def __init__(self,
-                 seq_len,
-                 pred_len,
-                 n_features,
-                 n_targets=None,
-                 target_indices=None,
-                 d_model=64,
-                 d_ff=128,
-                 e_layers=2,
-                 dropout=0.1,
-                 down_sampling_layers=2,
-                 down_sampling_window=2,
-                 down_sampling_method="avg",
-                 decomp_method="moving_avg",
-                 moving_avg=25,
-                 top_k=5,
-                 channel_independence=False,
-                 use_norm=True):
+    def __init__(self, seq_len, pred_len, n_features, n_targets=None, target_indices=None, d_model=64, d_ff=128, e_layers=2, dropout=0.1, down_sampling_layers=2, down_sampling_window=2, down_sampling_method="avg", decomp_method="moving_avg", moving_avg=25, top_k=5, channel_independence=False, use_norm=True):
         super().__init__()
         self.seq_len = seq_len
         self.pred_len = pred_len
@@ -274,10 +255,7 @@ class TimeMixer(nn.Module):
                 if out.size(-1) != self.n_features:
                     full = torch.zeros(out.size(0), out.size(1), self.n_features, device=out.device)
                     idx = self.target_indices if self.target_indices else slice(None, out.size(-1))
-                    if isinstance(idx, list):
-                        full[:, :, idx] = out
-                    else:
-                        full[:, :, idx] = out
+                    full[:, :, idx] = out
                     out = self.norm_layers[0](full, "denorm")
                     out = out[:, :, (self.target_indices if self.target_indices else slice(None, self.n_targets))]
                 else:

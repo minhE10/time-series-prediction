@@ -3,9 +3,6 @@ from itertools import product
 
 
 def difference(series, d=1):
-    """
-    Apply d-th order differencing
-    """
     y = np.array(series, dtype=float)
     for _ in range(d):
         y = np.diff(y)
@@ -13,12 +10,8 @@ def difference(series, d=1):
 
 
 def inverse_difference(diff_vals, history, d=1):
-    """
-    Invert differencing
-    """
     if d == 0:
         return np.array(diff_vals)
-    # For d = 1: cumsum starting from history[-1]
     y = np.array(diff_vals, dtype=float)
     for _ in range(d):
         y = np.concatenate([[history[-1]], y]).cumsum()[1:]
@@ -26,9 +19,6 @@ def inverse_difference(diff_vals, history, d=1):
 
 
 def acf(series, max_lag):
-    """
-    Autocorrelation function up to max_lag
-    """
     mu = series.mean()
     var = ((series - mu) ** 2).mean()
     if var == 0:
@@ -41,15 +31,11 @@ def acf(series, max_lag):
 
 
 def adf_test(series, max_lag=1):
-    """
-    Simplified ADF test. p_value < 0.05 suggests stationarity
-    """
     y = np.array(series, dtype=float)
     n = len(y)
     dy = np.diff(y)
     y_lag = y[:-1]
 
-    # Build regression matrix
     X = [np.ones(n - 1 - max_lag), y_lag[max_lag:]]
     for j in range(1, max_lag + 1):
         X.append(dy[max_lag - j: n - 1 - j])
@@ -66,15 +52,11 @@ def adf_test(series, max_lag=1):
     except Exception:
         return 0.0, 1.0
 
-    # p < 0.05 if t_stat < -2.89
     p_approx = 0.01 if t_stat < -3.43 else (0.05 if t_stat < -2.86 else 0.10 if t_stat < -2.57 else 0.50)
     return float(t_stat), p_approx
 
 
 def auto_d(series, max_d=2):
-    """
-    Determine differencing order d via ADF test
-    """
     y = series.copy()
     for d in range(max_d + 1):
         _, p = adf_test(y)
@@ -85,9 +67,6 @@ def auto_d(series, max_d=2):
 
 
 def fit_ar(y, p):
-    """
-    Fit AR(p) by OLS
-    """
     n = len(y)
     if p == 0:
         return np.array([]), y.copy()
@@ -99,9 +78,6 @@ def fit_ar(y, p):
 
 
 def fit_ma(resid, q):
-    """
-    Fit MA(q) on residuals by OLS
-    """
     n = len(resid)
     if q == 0:
         return np.array([])
@@ -146,7 +122,6 @@ class ARIMAModel:
         self.phi = phi
         self.theta = theta
 
-        # Store recent values for forecasting
         p_eff = max(self.p, 1)
         q_eff = max(self.q, 1)
         self._last_y = list(y_diff[-p_eff:]) if self.p > 0 else []
@@ -213,9 +188,6 @@ class ARIMAForecaster:
         self.history = {"train_loss": [], "val_loss": []}
 
     def fit_all(self, verbose=True):
-        """
-        Fit one ARIMA per target column on training data
-        """
         for col in self.dataset.target_cols:
             col_idx = self.dataset.target_cols.index(col)
             train_series = self.dataset.y_train[:, col_idx]
@@ -233,10 +205,7 @@ class ARIMAForecaster:
             m = ARIMAModel(p, d, q).fit(train_series)
             self.models[col] = m
 
-    def predict_rolling(self, X_arr, y_arr):
-        """
-        One-step-ahead rolling forecast on (X_arr, y_arr)
-        """
+    def predict_rolling(self, y_arr):
         y_pred = np.zeros_like(y_arr)
 
         for i, col in enumerate(self.dataset.target_cols):

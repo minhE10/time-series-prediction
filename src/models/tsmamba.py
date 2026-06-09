@@ -7,17 +7,17 @@ def selective_scan(u, delta, A, B, C, D):
     B_batch, L, d_inner = u.shape
     d_state = A.shape[1]
 
-    delta_A = torch.exp(delta.unsqueeze(-1) * A)         
-    delta_B_u = delta.unsqueeze(-1) * B.unsqueeze(2) * u.unsqueeze(-1) 
+    delta_A = torch.exp(delta.unsqueeze(-1) * A)
+    delta_B_u = delta.unsqueeze(-1) * B.unsqueeze(2) * u.unsqueeze(-1)
 
     h = torch.zeros(B_batch, d_inner, d_state, device=u.device, dtype=u.dtype)
     ys = []
     for t in range(L):
-        h = delta_A[:, t] * h + delta_B_u[:, t]           
-        y_t = (h * C[:, t].unsqueeze(1)).sum(-1)         
+        h = delta_A[:, t] * h + delta_B_u[:, t]
+        y_t = (h * C[:, t].unsqueeze(1)).sum(-1)
         ys.append(y_t)
 
-    y = torch.stack(ys, dim=1) + u * D                 
+    y = torch.stack(ys, dim=1) + u * D
     return y
 
 
@@ -50,20 +50,18 @@ class MambaBlock(nn.Module):
     def forward(self, x):
         _, L, _ = x.shape
 
-        xz = self.in_proj(x)                                
-        x_in, z = xz.chunk(2, dim=-1)                      
+        xz = self.in_proj(x)
+        x_in, z = xz.chunk(2, dim=-1)
 
-        # Causal conv
         x_conv = self.conv1d(x_in.permute(0, 2, 1))[:, :, :L].permute(0, 2, 1)
         x_conv = F.silu(x_conv)
 
-        # Compute SSM parameters
-        x_dbl = self.x_proj(x_conv)                         
+        x_dbl = self.x_proj(x_conv)
         delta, B_param, C_param = x_dbl.split(
             [self.d_inner, self.d_state, self.d_state], dim=-1
         )
-        delta = F.softplus(self.dt_proj(delta))               
-        A = -torch.exp(self.A_log)                               
+        delta = F.softplus(self.dt_proj(delta))
+        A = -torch.exp(self.A_log)
 
         y = selective_scan(x_conv, delta, A, B_param, C_param, self.D)
         y = y * F.silu(z)
@@ -96,19 +94,7 @@ class RevIN(nn.Module):
 
 
 class TSMamba(nn.Module):
-    def __init__(self,
-                 seq_len,
-                 pred_len,
-                 n_features,
-                 n_targets=None,
-                 d_model=64,
-                 d_state=16,
-                 d_conv=4,
-                 expand=2,
-                 n_layers=2,
-                 patch_len=8,
-                 dropout=0.1,
-                 use_revin=True):
+    def __init__(self, seq_len, pred_len, n_features, n_targets=None, d_model=64, d_state=16, d_conv=4, expand=2, n_layers=2, patch_len=8, dropout=0.1, use_revin=True):
         super().__init__()
         self.seq_len = seq_len
         self.pred_len = pred_len
@@ -159,13 +145,13 @@ class TSMamba(nn.Module):
             x = self.revin(x, "norm")
 
         n_patches = T // self.patch_len
-        x_patch = x[:, : n_patches * self.patch_len, :]         
-        x_patch = x_patch.reshape(B, n_patches, self.patch_len * C) 
-        h = self.patch_embed(x_patch)                                
+        x_patch = x[:, : n_patches * self.patch_len, :]
+        x_patch = x_patch.reshape(B, n_patches, self.patch_len * C)
+        h = self.patch_embed(x_patch)
 
         h_fwd = self._encode(h)
         h_bwd = self._encode_bwd(h)
-        h = self.norm(h_fwd + h_bwd)                                 
+        h = self.norm(h_fwd + h_bwd)
 
         h_flat = h.reshape(B, -1)
         out = self.head(self.head_drop(h_flat))

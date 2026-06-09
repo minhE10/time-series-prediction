@@ -62,9 +62,6 @@ def _run_prefix(model_name, pred_len, data_name, out_dir):
 
 
 def save_history(history, model_name, pred_len, data_name, out_dir="."):
-    """
-    Save train_loss and val_loss as two separate CSV files
-    """
     prefix = _run_prefix(model_name, pred_len, data_name, out_dir)
     for key in ("train_loss", "val_loss"):
         path = f"{prefix}_{key}.csv"
@@ -78,9 +75,6 @@ def save_history(history, model_name, pred_len, data_name, out_dir="."):
 
 
 def load_history(model_name, pred_len, data_name, out_dir="."):
-    """
-    Load saved loss logs back into a history dict compatible with plot_loss
-    """
     prefix = _run_prefix(model_name, pred_len, data_name, out_dir)
     history = {}
     for key in ("train_loss", "val_loss"):
@@ -92,9 +86,6 @@ def load_history(model_name, pred_len, data_name, out_dir="."):
 
 
 def save_predictions(y_true, y_pred, target_cols, model_name, pred_len, data_name, out_dir="."):
-    """
-    Save test-set predictions and ground truth (original scale) to .npz
-    """
     prefix = _run_prefix(model_name, pred_len, data_name, out_dir)
     path = f"{prefix}_predictions.npz"
     np.savez(path,
@@ -106,9 +97,6 @@ def save_predictions(y_true, y_pred, target_cols, model_name, pred_len, data_nam
 
 
 def load_predictions(model_name, pred_len, data_name, out_dir="."):
-    """
-    Load saved predictions. Returns (y_true, y_pred, target_cols)
-    """
     prefix = _run_prefix(model_name, pred_len, data_name, out_dir)
     path = f"{prefix}_predictions.npz"
     data = np.load(path, allow_pickle=True)
@@ -116,11 +104,6 @@ def load_predictions(model_name, pred_len, data_name, out_dir="."):
 
 
 def save_checkpoint(trainer, model_name, pred_len, data_name, out_dir="."):
-    """
-    Save model checkpoint.
-        PyTorch models  -> <prefix>_checkpoint.pt
-        XGBoost / ARIMA -> <prefix>_checkpoint.pkl
-    """
     import pickle
     prefix = _run_prefix(model_name, pred_len, data_name, out_dir)
 
@@ -148,11 +131,6 @@ def save_checkpoint(trainer, model_name, pred_len, data_name, out_dir="."):
 
 
 def load_checkpoint(trainer, model_name, pred_len, data_name, out_dir="."):
-    """
-    Load a saved checkpoint into an existing trainer instance.
-        PyTorch: loads state_dict into trainer.model (requires model already built).
-        XGBoost / ARIMA: restores internal model objects so .predict() works.
-    """
     import pickle
     prefix = _run_prefix(model_name, pred_len, data_name, out_dir)
 

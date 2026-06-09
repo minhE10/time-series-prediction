@@ -49,7 +49,6 @@ class EncoderBlock(nn.Module):
         self.drop = nn.Dropout(dropout)
 
     def forward(self, x):
-        # x: (B, N, d_model)
         attn_out, _ = self.attn(x, x, x)
         x = self.norm1(x + self.drop(attn_out))
         x = self.norm2(x + self.drop(self.ff(x)))
@@ -57,18 +56,7 @@ class EncoderBlock(nn.Module):
 
 
 class iTransformer(nn.Module):
-    def __init__(self,
-                 seq_len,
-                 pred_len,
-                 n_features,
-                 n_targets=None,
-                 d_model=64,
-                 n_heads=4,
-                 e_layers=2,
-                 d_ff=128,
-                 dropout=0.1,
-                 use_revin=True,
-                 target_indices=None):
+    def __init__(self, seq_len, pred_len, n_features, n_targets=None, d_model=64, n_heads=4, e_layers=2, d_ff=128, dropout=0.1, use_revin=True, target_indices=None):
         super().__init__()
         self.seq_len = seq_len
         self.pred_len = pred_len

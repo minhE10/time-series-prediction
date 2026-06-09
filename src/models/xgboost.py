@@ -39,14 +39,14 @@ class _Node:
 
     def _find_split(self):
         n_feat = self.X.shape[1]
-        n_try  = max(1, int(n_feat * self.colsample))
-        feats  = np.random.choice(n_feat, n_try, replace=False)
+        n_try = max(1, int(n_feat * self.colsample))
+        feats = np.random.choice(n_feat, n_try, replace=False)
 
         best_gain = 0.0
         best_col = best_val = best_lhs = best_rhs = None
 
         for col in feats:
-            x_col   = self.X[self.idxs, col]
+            x_col = self.X[self.idxs, col]
             h_local = self.hessian[self.idxs]
             for thr in np.unique(x_col)[:-1]:
                 lhs = x_col <= thr
@@ -70,7 +70,7 @@ class _Node:
             max_depth=self.max_depth, min_child_weight=self.min_child_weight,
             reg_lambda=self.reg_lambda, reg_gamma=self.reg_gamma, colsample=self.colsample,
         )
-        self.left  = _Node(self.depth + 1, self.idxs[best_lhs], **kw)
+        self.left = _Node(self.depth + 1, self.idxs[best_lhs], **kw)
         self.right = _Node(self.depth + 1, self.idxs[best_rhs], **kw)
 
     def predict_row(self, x):
@@ -90,15 +90,8 @@ class _XGBoostTree:
 
 
 class XGBoost:
-    def __init__(self,
-                 learning_rate=0.05,
-                 max_depth=6,
-                 min_child_weight=1,
-                 subsample=0.8,
-                 colsample=0.8,
-                 reg_lambda=1.0,
-                 reg_gamma=0.0,
-                 random_state=42):
+    def __init__(self, learning_rate=0.05, max_depth=6, min_child_weight=1, subsample=0.8,
+                 colsample=0.8, reg_lambda=1.0, reg_gamma=0.0, random_state=42):
         self.learning_rate = learning_rate
         self.max_depth = max_depth
         self.min_child_weight = min_child_weight
@@ -116,10 +109,10 @@ class XGBoost:
         n = len(y_train)
         self.base_pred = float(y_train.mean())
 
-        pred_tr  = np.full(n, self.base_pred)
+        pred_tr = np.full(n, self.base_pred)
         pred_val = np.full(len(y_val), self.base_pred) if y_val is not None else None
 
-        self.trees   = []
+        self.trees = []
         self.history = {"train_loss": [], "val_loss": []}
 
         for i in range(n_estimators):

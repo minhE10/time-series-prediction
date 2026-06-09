@@ -3,10 +3,7 @@ import torch
 from config.model_config import MODEL_CONFIG
 
 
-def build_model(model_name: str, 
-                dataset, 
-                seq_len: int, 
-                pred_len: int):
+def build_model(model_name: str, dataset, seq_len: int, pred_len: int):
     cfg = MODEL_CONFIG[model_name]
 
     if model_name == "itransformer":
@@ -23,7 +20,7 @@ def build_model(model_name: str,
         from src.models.timemixer import TimeMixer
         down_win = cfg["down_sampling_window"]
         n_down = cfg["down_sampling_layers"]
-        coarsest = seq_len // (down_win ** n_down)        
+        coarsest = seq_len // (down_win ** n_down)
         moving_avg = max(5, min(cfg["moving_avg"], coarsest // 2))
         return TimeMixer(
             seq_len=seq_len, pred_len=pred_len,
@@ -64,13 +61,7 @@ def build_model(model_name: str,
                      "Choose from: itransformer, timemixer, tsmamba, xgboost, arima")
 
 
-def build_trainer(model_name: str, 
-                  model, 
-                  dataset, 
-                  train_loader, 
-                  val_loader, 
-                  test_loader,
-                  device: str = "cpu"):
+def build_trainer(model_name: str, model, dataset, train_loader, val_loader, test_loader, device: str = "cpu"):
     cfg = MODEL_CONFIG[model_name]
 
     if model_name in ("itransformer", "timemixer", "tsmamba"):

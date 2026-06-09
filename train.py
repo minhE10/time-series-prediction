@@ -72,8 +72,9 @@ class Trainer:
             y_true = self.dataset.inverse_transform_target(y_true)
         return y_true, y_pred
 
-    def fit(self, num_epochs=200, verbose=True, log_every=10):
+    def fit(self, num_epochs=200, verbose=True, log_every=10, patience=20):
         best_val = float("inf")
+        no_improve = 0
         for epoch in range(1, num_epochs + 1):
             train_loss = self._train_epoch()
             val_loss = self._eval_loss(self.val_loader)
@@ -90,6 +91,13 @@ class Trainer:
             if val_loss < best_val:
                 best_val = val_loss
                 self.best_state = copy.deepcopy(self.model.state_dict())
+                no_improve = 0
+            else:
+                no_improve += 1
+                if patience and no_improve >= patience:
+                    if verbose:
+                        print(f"Early stopping at epoch {epoch} (no improvement for {patience} epochs)")
+                    break
 
             if verbose and epoch % log_every == 0:
                 lr = self.optimizer.param_groups[0]["lr"]

@@ -44,12 +44,13 @@ class DFTSeriesDecomp(nn.Module):
 
 
 class MultiScaleSeasonMixing(nn.Module):
-    def __init__(self, seq_len, down_window, n_layers):
+    def __init__(self, seq_len, down_window, n_layers, dropout=0.0):
         super().__init__()
         self.layers = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(seq_len // (down_window ** i), seq_len // (down_window ** (i + 1))),
                 nn.GELU(),
+                nn.Dropout(dropout),
                 nn.Linear(seq_len // (down_window ** (i + 1)), seq_len // (down_window ** (i + 1))),
             )
             for i in range(n_layers)
@@ -65,12 +66,13 @@ class MultiScaleSeasonMixing(nn.Module):
 
 
 class MultiScaleTrendMixing(nn.Module):
-    def __init__(self, seq_len, down_window, n_layers):
+    def __init__(self, seq_len, down_window, n_layers, dropout=0.0):
         super().__init__()
         self.layers = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(seq_len // (down_window ** (i + 1)), seq_len // (down_window ** i)),
                 nn.GELU(),
+                nn.Dropout(dropout),
                 nn.Linear(seq_len // (down_window ** i), seq_len // (down_window ** i)),
             )
             for i in reversed(range(n_layers))
@@ -105,14 +107,14 @@ class PastDecomposableMixing(nn.Module):
 
         if not channel_independence:
             self.cross = nn.Sequential(
-                nn.Linear(d_model, d_ff), nn.GELU(), nn.Linear(d_ff, d_model)
+                nn.Linear(d_model, d_ff), nn.GELU(), nn.Dropout(dropout), nn.Linear(d_ff, d_model)
             )
 
-        self.season_mix = MultiScaleSeasonMixing(seq_len, down_window, n_down_layers)
-        self.trend_mix = MultiScaleTrendMixing(seq_len, down_window, n_down_layers)
+        self.season_mix = MultiScaleSeasonMixing(seq_len, down_window, n_down_layers, dropout)
+        self.trend_mix = MultiScaleTrendMixing(seq_len, down_window, n_down_layers, dropout)
 
         self.out_proj = nn.Sequential(
-            nn.Linear(d_model, d_ff), nn.GELU(), nn.Linear(d_ff, d_model)
+            nn.Linear(d_model, d_ff), nn.GELU(), nn.Dropout(dropout), nn.Linear(d_ff, d_model)
         )
 
     def forward(self, x_list):

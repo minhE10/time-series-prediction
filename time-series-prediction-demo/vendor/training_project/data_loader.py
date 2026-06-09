@@ -96,9 +96,6 @@ class TimeSeriesDataset:
             df["wd"] = df["wd"].fillna(df["wd"].mode()[0])
             df = pd.get_dummies(df, columns=["wd"], prefix="wd", dtype=np.float32)
 
-        numeric_cols = df.select_dtypes(include=[np.number]).columns.tolist()
-        df[numeric_cols] = df[numeric_cols].ffill().bfill()
-
         feature_cols = list(self.config["feature_cols"])
         target_cols = list(self.config["target_cols"])
 
@@ -119,9 +116,17 @@ class TimeSeriesDataset:
         val_start = max(0, train_end - self.seq_len)
         test_start = max(0, val_end - self.seq_len)
 
+        fill_cols = list(dict.fromkeys(self.feature_cols + self.target_cols))
+        train_fill = (
+            df.iloc[:train_end][fill_cols]
+            .apply(pd.to_numeric, errors="coerce")
+            .median()
+            .fillna(0.0)
+        )
+
         def to_float(sub, cols):
             arr = sub[cols].apply(pd.to_numeric, errors="coerce").astype(np.float32)
-            return arr.ffill().bfill().to_numpy()
+            return arr.ffill().fillna(train_fill[cols]).to_numpy()
 
         self.X_train = to_float(df.iloc[:train_end], self.feature_cols)
         self.X_val = to_float(df.iloc[val_start:val_end], self.feature_cols)

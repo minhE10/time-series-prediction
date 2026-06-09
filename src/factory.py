@@ -16,6 +16,7 @@ def build_model(model_name: str,
             n_features=dataset.n_features, n_targets=dataset.n_targets,
             d_model=cfg["d_model"], n_heads=cfg["n_heads"],
             e_layers=cfg["e_layers"], d_ff=cfg["d_ff"], dropout=cfg["dropout"],
+            target_indices=dataset.target_indices,
         )
 
     if model_name == "timemixer":

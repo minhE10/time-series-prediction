@@ -17,13 +17,13 @@ MODEL_CONFIG = {
     },
 
     "itransformer": {
-        "d_model": 32,
+        "d_model": 64,
         "n_heads": 4,
-        "e_layers": 2,
-        "d_ff": 64,
-        "dropout": 0.3,
+        "e_layers": 3,
+        "d_ff": 128,
+        "dropout": 0.2,
         "learning_rate": 5e-4,
-        "weight_decay": 1e-3,
+        "weight_decay": 1e-4,
         "batch_size": 32
     },
 

@@ -68,13 +68,15 @@ class iTransformer(nn.Module):
                  e_layers=2,
                  d_ff=128,
                  dropout=0.1,
-                 use_revin=True):
+                 use_revin=True,
+                 target_indices=None):
         super().__init__()
         self.seq_len = seq_len
         self.pred_len = pred_len
         self.n_features = n_features
         self.n_targets = n_targets if n_targets is not None else n_features
         self.use_revin = use_revin
+        self.target_indices = target_indices
 
         if use_revin:
             self.revin = RevIN(n_features)
@@ -105,4 +107,6 @@ class iTransformer(nn.Module):
         if self.use_revin:
             out = self.revin(out, "denorm")
 
+        if self.target_indices is not None:
+            return out[:, :, self.target_indices]
         return out[:, :, : self.n_targets]

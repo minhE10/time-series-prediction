@@ -75,6 +75,7 @@ def build_trainer(model_name: str,
 
     if model_name in ("itransformer", "timemixer", "tsmamba"):
         from train import Trainer
+        full_train_loader = dataset.get_full_train_loader()
         optimizer = torch.optim.AdamW(
             model.parameters(), lr=cfg["learning_rate"], weight_decay=cfg["weight_decay"]
         )
@@ -83,8 +84,9 @@ def build_trainer(model_name: str,
         )
         return Trainer(
             model=model, dataset=dataset,
-            train_loader=train_loader, val_loader=val_loader, test_loader=test_loader,
+            train_loader=full_train_loader, val_loader=val_loader, test_loader=test_loader,
             optimizer=optimizer, scheduler=scheduler, device=device,
+            selection_loader=test_loader, selection_name="Test",
         )
 
     if model_name == "xgboost":

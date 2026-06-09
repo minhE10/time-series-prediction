@@ -17,7 +17,9 @@ class Trainer:
                  optimizer=None,
                  scheduler=None,
                  device="cpu",
-                 grad_clip=1.0):
+                 grad_clip=1.0,
+                 selection_loader=None,
+                 selection_name="Val"):
         self.model = model.to(device)
         self.dataset = dataset
         self.train_loader = train_loader
@@ -30,8 +32,10 @@ class Trainer:
         self.scheduler = scheduler
         self.device = device
         self.grad_clip = grad_clip
+        self.selection_loader = selection_loader if selection_loader is not None else val_loader
+        self.selection_name = selection_name
         self.best_state = None
-        self.history = {"train_loss": [], "val_loss": []}
+        self.history = {"train_loss": [], "val_loss": [], "selection_name": selection_name}
 
     def _train_epoch(self):
         self.model.train()
@@ -73,33 +77,33 @@ class Trainer:
         return y_true, y_pred
 
     def fit(self, num_epochs=200, verbose=True, log_every=10):
-        best_val = float("inf")
+        best_selection = float("inf")
         for epoch in range(1, num_epochs + 1):
             train_loss = self._train_epoch()
-            val_loss = self._eval_loss(self.val_loader)
+            selection_loss = self._eval_loss(self.selection_loader)
 
             if self.scheduler is not None:
                 if isinstance(self.scheduler, torch.optim.lr_scheduler.ReduceLROnPlateau):
-                    self.scheduler.step(val_loss)
+                    self.scheduler.step(selection_loss)
                 else:
                     self.scheduler.step()
 
             self.history["train_loss"].append(train_loss)
-            self.history["val_loss"].append(val_loss)
+            self.history["val_loss"].append(selection_loss)
 
-            if val_loss < best_val:
-                best_val = val_loss
+            if selection_loss < best_selection:
+                best_selection = selection_loss
                 self.best_state = copy.deepcopy(self.model.state_dict())
 
             if verbose and epoch % log_every == 0:
                 lr = self.optimizer.param_groups[0]["lr"]
                 print(f"Epoch [{epoch:03d}/{num_epochs}] "
-                      f"Train: {train_loss:.6f} | Val: {val_loss:.6f} | "
-                      f"Best: {best_val:.6f} | lr: {lr:.2e}")
+                      f"Train: {train_loss:.6f} | {self.selection_name}: {selection_loss:.6f} | "
+                      f"Best {self.selection_name}: {best_selection:.6f} | lr: {lr:.2e}")
 
         if self.best_state is not None:
             self.model.load_state_dict(self.best_state)
-        print(f"Done. Best val loss: {best_val:.6f}")
+        print(f"Done. Best {self.selection_name} loss: {best_selection:.6f}")
         return self.history
 
     def evaluate(self, loader=None, scaled=False, title="TEST"):

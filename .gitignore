@@ -1,7 +1,7 @@
+.DS_Store
 *.rar
 *.zip
 __pycache__/
 *.pyc
-time-series-prediction-demo/gradio.log
-time-series-prediction-demo/gradio.err.log
-.DS_Store
+demo/gradio.log
+demo/gradio.err.log

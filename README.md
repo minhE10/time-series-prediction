@@ -7,6 +7,11 @@ Benchmarks five forecasting approaches (ARIMA, XGBoost, iTransformer, TimeMixer,
 
 ---
 
+## Model weights
+Model weights are available [here](https://drive.google.com/drive/folders/1YCiRHWmAjzIc0HxIJySsRy9HfAVxWWKx?usp=sharing)
+
+---
+
 ## Project Structure
 
 ```

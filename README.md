@@ -14,7 +14,7 @@
 </div>
 
 ## Overview
-**Applied Statistics & Experimental Design - Group 10 | Hanoi University of Science and Technology, 2026**. Benchmarks five forecasting approaches (ARIMA, XGBoost, iTransformer, TimeMixer, TSMamba) across five real-world datasets and three forecast horizons (12 / 24 / 48 steps). All models are implemented **from scratch** - no external ML libraries beyond NumPy and PyTorch. Ships with a [live interactive demo](https://huggingface.co/spaces/nvtkienn/time-series-prediction-demo).
+Benchmarks five forecasting approaches (ARIMA, XGBoost, iTransformer, TimeMixer, TSMamba) across five real-world datasets and three forecast horizons (12 / 24 / 48 steps). All models are implemented **from scratch** - no external ML libraries beyond NumPy and PyTorch. Ships with a [live interactive demo](https://huggingface.co/spaces/nvtkienn/time-series-prediction-demo).
 
 ---
 
@@ -38,7 +38,7 @@ All deep learning models use RevIN instance normalization, seq_len=48, and early
 |---|---|---|---|---|
 | Sunspots | Monthly | 3,265 | 1 | [Kaggle](https://www.kaggle.com/datasets/robervalt/sunspots) |
 | Appliances Energy | 10-min | 19,735 | 2 (Appliances, lights) | [Kaggle](https://www.kaggle.com/datasets/loveall/appliances-energy-prediction) |
-| Beijing Air Quality | Hourly | 35,064 | 6 (PM2.5, PM10, SO2, NO2, CO, O3) | [UKaggle](https://www.kaggle.com/datasets/sid321axn/beijing-multisite-airquality-data-set) |
+| Beijing Air Quality | Hourly | 35,064 | 6 (PM2.5, PM10, SO2, NO2, CO, O3) | [Kaggle](https://www.kaggle.com/datasets/sid321axn/beijing-multisite-airquality-data-set) |
 | Hanoi Air Quality | Hourly | 26,280 | 7 (PM2.5, PM10, AQI, CO, NO2, O3, SO2) | [Github](https://github.com/namanhnt/Hanoi-Air-Quality-Analysis) |
 | Bitcoin | Hourly | 125,833 | 1 (Open price) | [Kaggle](https://www.kaggle.com/datasets/mczielinski/bitcoin-historical-data) |
 

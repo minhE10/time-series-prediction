@@ -38,19 +38,19 @@ class _Node:
         feats = np.random.choice(n_feat, max(1, int(n_feat * self.colsample)), replace=False)
         n_try = len(feats)
 
-        X_local  = self.X[self.idxs][:, feats]       
-        orders   = np.argsort(X_local, axis=0)        
-        col_idx  = np.arange(n_try)
-        X_sorted = X_local[orders, col_idx]           
+        X_local = self.X[self.idxs][:, feats]
+        orders = np.argsort(X_local, axis=0)
+        col_idx = np.arange(n_try)
+        X_sorted = X_local[orders, col_idx]
 
-        GL = np.cumsum(g[orders], axis=0)[:-1]       
+        GL = np.cumsum(g[orders], axis=0)[:-1]
         GR = G_total - GL
 
         counts = np.arange(1, n, dtype=np.float64)
-        HL = (2.0 * counts)[:, None]                
+        HL = (2.0 * counts)[:, None]
         HR = (2.0 * (n - counts))[:, None]
 
-        ok = (X_sorted[:-1] != X_sorted[1:])        
+        ok = (X_sorted[:-1] != X_sorted[1:])
         mw = self.min_child_weight
         ok &= (HL >= mw) & (HR >= mw)
 
@@ -72,7 +72,7 @@ class _Node:
         kw = dict(gradient=self.gradient, hessian=self.hessian, X=self.X,
                   max_depth=self.max_depth, min_child_weight=self.min_child_weight,
                   reg_lambda=self.reg_lambda, reg_gamma=self.reg_gamma, colsample=self.colsample)
-        self.left  = _Node(self.depth + 1, self.idxs[lhs],  **kw)
+        self.left = _Node(self.depth + 1, self.idxs[lhs], **kw)
         self.right = _Node(self.depth + 1, self.idxs[~lhs], **kw)
 
 
@@ -95,8 +95,8 @@ class _XGBoostTree:
                 feat.append(node.split_col)
                 thr.append(node.split_val)
                 left.append(-1)
-                right.append(-1) 
-                left[idx]  = _build(node.left)
+                right.append(-1)
+                left[idx] = _build(node.left)
                 right[idx] = _build(node.right)
             return idx
 

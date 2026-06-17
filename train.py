@@ -128,7 +128,7 @@ class XGBoostTrainer:
     def fit(self, num_epochs=200, verbose=True, log_every=10):
         from src.models.xgboost import XGBoost, loader_to_numpy
 
-        X_tr, y_tr   = loader_to_numpy(self.train_loader)
+        X_tr, y_tr = loader_to_numpy(self.train_loader)
         X_val, y_val = loader_to_numpy(self.val_loader)
 
         y_tr_1d = y_tr[:, -1, :]
@@ -136,12 +136,12 @@ class XGBoostTrainer:
 
         n_feat = self.dataset.n_features
         seq_len = self.dataset.seq_len
-        t_idxs = self.dataset.target_indices   
+        t_idxs = self.dataset.target_indices
         anchor_cols = [(seq_len - 1) * n_feat + ti for ti in t_idxs]
-        last_tr = X_tr[:, anchor_cols]  
-        last_val = X_val[:, anchor_cols] 
+        last_tr = X_tr[:, anchor_cols]
+        last_val = X_val[:, anchor_cols]
 
-        delta_tr = y_tr_1d  - last_tr
+        delta_tr = y_tr_1d - last_tr
         delta_val = y_val_1d - last_val
 
         histories, self.models = [], []
@@ -176,7 +176,7 @@ class XGBoostTrainer:
         seq_len = self.dataset.seq_len
         t_idxs = self.dataset.target_indices
         anchor_cols = [(seq_len - 1) * n_feat + ti for ti in t_idxs]
-        last = X[:, anchor_cols]  
+        last = X[:, anchor_cols]
 
         preds = np.column_stack([m.predict(X) for m in self.models]) + last
         y_true = y_true_raw[:, -1, :]

@@ -1,17 +1,6 @@
-"""
-demo/ui.py — builds the Gradio app that hosts the redesigned web demo.
-
-The UI itself is a self-contained web app living in `demo/web/` (index.html +
-*.jsx + data.js + predictions.js). Gradio just embeds it in an <iframe>; the
-iframe points at Gradio's built-in static-file route so every sibling asset
-(data.js, charts.jsx, predictions.js, …) resolves automatically.
-
-This keeps the original project layout intact:
-    app.py            -> build_app().launch(...)
-    demo/ui.py        -> build_app()           (this file)
-    demo/web/         -> the frontend
-    core/ configs/ …  -> untouched (used offline to generate predictions)
-"""
+# Gradio shell that embeds the static React SPA (demo/web/) via an iframe.
+# Gradio serves allowed files at /gradio_api/file=<abs-path>; every asset
+# (data.js, charts.jsx, predictions.js, ...) resolves automatically from there.
 from pathlib import Path
 
 import gradio as gr

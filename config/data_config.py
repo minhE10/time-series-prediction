@@ -1,5 +1,6 @@
 DATASET_CONFIG = {
     "sunspots": {
+        "link": "https://www.kaggle.com/datasets/robervalt/sunspots",
         "time_col": "Date",
         "drop_cols": ["Unnamed: 0"],
         "feature_cols": [
@@ -10,6 +11,7 @@ DATASET_CONFIG = {
     },
 
     "appliances_energy": {
+        "link": "https://www.kaggle.com/datasets/loveall/appliances-energy-prediction",
         "time_col": "date",
         "feature_cols": [
             "Appliances", "lights",
@@ -22,6 +24,7 @@ DATASET_CONFIG = {
     },
 
     "beijing_air_quality": {
+        "link": "https://www.kaggle.com/datasets/sid321axn/beijing-multisite-airquality-data-set",
         "time_col": ["year", "month", "day", "hour"],
         "feature_cols": [
             "PM2.5", "PM10", "SO2", "NO2", "CO", "O3",
@@ -33,6 +36,7 @@ DATASET_CONFIG = {
     },
 
     "hanoi_air_quality": {
+        "link": "https://github.com/namanhnt/Hanoi-Air-Quality-Analysis/blob/main/Data/hanoi-aqi-weather-data.csv",
         "time_col": "Local Time",
         "feature_cols": [
             "PM25", "PM10", "AQI", "CO", "NO2", "O3", "SO2",
@@ -45,6 +49,7 @@ DATASET_CONFIG = {
     },
 
     "bitcoin": {
+        "link": "https://www.kaggle.com/datasets/mczielinski/bitcoin-historical-data",
         "time_col": "Timestamp",
         "feature_cols": ["Open"],
         "target_cols": ["Open"]

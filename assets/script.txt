@@ -1,0 +1,146 @@
+Slide 1: (Hoai Anh)
+Hello everyone, my name is Hoai Anh, and I am joined by my teammates: Tien Dung, Nam Hai, Duc Minh, and Trung Kiên.
+
+Today we present our project “Time Series Prediction” — a comparative study of five forecasting models, from classical statistical methods to state-of-the-art deep learning, evaluated across five datasets and three forecasting horizons.
+
+Slide 2:
+Our presentation is organized into five sections: Problem and Motivation, Datasets, Methods, Experiments and Results and finally, Conclusion and limitations
+
+Slide 3:
+Let us begin with section one: Problem and Motivation
+
+Slide 4:
+Better forecasts translate directly into better decisions. To make this concrete, we selected three application domains: energy and air quality, where predictions can drive timely public-health alerts; finance, where Bitcoin prices serve as a noisy stress test for any forecasting model; and natural science, where the sunspot cycle is periodic yet surprisingly hard to pin down precisely.
+
+This leads to our central question: no single model wins everywhere — so which family, statistical, tree-based, or deep learning, truly earns its added complexity, and under what conditions?
+
+Slide 5:
+Formally, given C input features observed over a look-back window of L steps, the task is to predict the next H steps for a chosen set of targets. Two settings arise: univariate, where one channel predicts itself, and multivariate, where multiple channels are used together. In our setup, L is fixed at 48 and H is 12, 24, or 48 — corresponding to short, medium, and long-range forecasts.
+
+Slide 6:
+With that question in mind, let us define the exact scope of our study. To ensure a fair comparison across models, we hold the entire data pipeline — look-back, horizons, and metrics - fixed, and vary only the model.
+
+Concretely, our study spans: Five models from three families - ARIMA, XGBoost, iTransformer, TimeMixer, and TSMamba. Five datasets covering both univariate and multivariate cases. And three horizons: 12, 24, and 48 steps
+
+Slide 7:
+Moving on to section two - Datasets
+
+Slide 8:
+We selected five publicly available datasets
+
+Sunspots - solar activity, univariate, monthly sampling
+Appliances Energy - building energy consumption, sampled every ten minutes
+Beijing Air Quality and Hanoi Air Quality - urban air pollution, both sampled hourly
+Bitcoin - BTC/USD opening price, also hourly
+
+The number of targets ranges from one to seven, and the signal dynamics range from smooth and periodic like Sunspots to sharp and extremely noisy like Bitcoin - stressing each model in a fundamentally different way
+
+Slide 9:
+With the datasets introduced, let us walk through how we prepare them. Every dataset goes through the same four steps: parse the datetime index into a consistent format; forward-fill gaps and impute remaining missing values with the training-set median; add hour and month as sine-cosine pairs to encode periodicity without discontinuities; and finally, fit a StandardScaler on the training split only and apply it to validation and test. All predictions are inverse-transformed back to the original scale before computing any metrics.
+
+Slide 10:
+Once the data is cleaned and scaled, we slice it into windows. Each training example is a contiguous look-back window of L steps paired with the following H steps as the target, the window slides one step at a time across the full series
+
+Splits are taken in strict chronological order - no shuffling - with a 70-20-10 ratio for train, validation, and test.
+
+Slide 11: (Trung Kiên)
+Thank you Hoai Anh. Now let me walk us through section three - Methods
+
+Slide 12:
+Our five models span three distinct families.
+ARIMA - a classical statistical model.
+XGBoost - a gradient-boosted tree ensemble.
+And three deep learning models: iTransformer, TimeMixer, and TSMamba.
+Every model was implemented entirely from scratch using NumPy for ARIMA and XGBoost, and PyTorch for the three deep learning models - no external forecasting libraries were used.
+
+Slide 13:
+Starting with the statistical family — ARIMA combines two terms: an autoregressive term AR(p), which models the current value as a weighted combination of the past p values, and a moving-average term MA(q), which corrects using the past q forecast errors. Both sets of coefficients are estimated by ordinary least squares. We use ARIMA(3, 0, 3) — no differencing, assuming the series are sufficiently stationary after standardization.
+
+Slide 14-15:
+The second model is XGBoost, which builds predictions as an additive ensemble of regression trees — each new tree corrects the residual error left by the previous one. The training objective balances prediction loss against a regularization term that penalizes both tree complexity and leaf weight magnitude, keeping overfitting in check.
+
+One important implementation detail: rather than predicting the target value directly, the model predicts the difference between the target and an anchor value at the last step of the input window, then adds the anchor back. This residual formulation makes training significantly more stable.
+
+Slide 16:
+Move to our first deep learning model — iTransformer, which inverts the conventional Transformer layout.
+
+In the standard Transformer, each time step is a token bundling all variates together. Self-attention captures temporal dependencies across these time tokens, but mixing physically unrelated measurements into one token produces noisy attention maps, and the model needs positional embeddings to encode time order.
+
+iTransformer flips this: the entire time history of one variable becomes a single token. Self-attention now operates across variates, so the attention matrix directly captures cross-channel correlations — how much PM2.5 relates to NO2, for example. And since there is only one token per variate, there are no positions to encode, so positional embeddings are no longer needed. The feed-forward network takes over the temporal dimension, learning patterns within each variate's history independently.
+
+One predictable weakness: in the univariate case there is only one variate, so self-attention becomes trivial. The model then relies entirely on the FFN, putting it at a disadvantage on datasets like Sunspots or Bitcoin.
+
+The diagram on the slide shows it clearly: standard Transformer slices vertically by time, iTransformer slices horizontally by channel.
+
+Slide 17:
+The second deep learning model is TimeMixer. Its core idea is to mix micro and macro temporal information together.
+
+A time series looks different depending on the viewing scale. Fine scales reveal high-frequency fluctuations and seasonal patterns; coarse scales reveal the dominant long-run trend. TimeMixer creates a pyramid of downsampled copies via average pooling, where the window doubles at each level, giving views at half, a quarter, an eighth of the original length, and so on.
+
+At each scale, a moving-average decomposition separates trend from seasonal components. These are then mixed across scales separately: seasonal information flows bottom-up from fine to coarse, with the MLP compressing the time dimension; trend information flows top-down from coarse to fine, with the MLP expanding it back. The two MLPs deliberately work in opposite directions.
+
+Finally, each scale gets its own linear predictor and all predictions are summed — so the model draws complementary information from every resolution at once.
+
+Slide 18:
+The third and final deep learning model is TSMamba, which is motivated by a core limitation of Transformers: self-attention scales quadratically — O(n squared) in both time and memory. Doubling the input quadruples the cost.
+
+State Space Models solve this by maintaining a fixed-size hidden state updated step by step, giving linear O(n) complexity. What makes Mamba special is its selective scan mechanism — the transition parameters are input-dependent, so the model dynamically decides what to remember and what to forget based on what it is currently seeing. This gives Mamba expressive power comparable to Transformers while keeping the cost linear.
+
+For time series, TSMamba divides the input into patches for richer local context, then runs two Mamba encoders in parallel: one forward, one on the time-reversed sequence. The outputs are combined, normalized, and passed to a linear prediction head — giving every patch full context from both directions with O(n) complexity.
+
+Slide 19-20:
+That covers all five models. Now let us move on to section four - Experiments and Results.
+
+Slide 21:
+Our setup is held fixed across all runs: look-back window of 48, horizons of 12, 24, and 48 steps, MSE loss on standardized targets, up to 200 epochs with early stopping at patience 20, and the best checkpoint selected by validation loss. All metrics are then computed on the original scale. That gives us 75 evaluation runs in total — five models times five datasets times three horizons.
+
+Slide 22:
+With the setup clear, let us look at how we measure performance. We report four complementary metrics to give a well-rounded picture of accuracy.
+
+MAE - Mean Absolute Error: average error magnitude in the target's own units.
+RMSE - Root Mean Squared Error: penalizes large errors more heavily,
+making it sensitive to spikes and outliers.
+WMAPE - Weighted MAPE: scale-free, enabling fair comparison
+across datasets with very different magnitudes.
+And R² - Coefficient of Determination: the fraction of variance explained. An R² of one is perfect; an R² of zero means the model is no better than predicting the mean.
+
+Slide 23: (Duc Minh)
+Thank you Trung Kiên. To make the results interactive and accessible, we deployed the full set of 75 prediction outputs to a live demo hosted on Hugging Face Spaces.
+
+You can scan the QR code on this slide or follow the URL shown below
+
+Our workspace is structured into four main sections: 
+Theory - covers the theoretical background and architectures of the models we implemented
+Dataset - an overview and statistical summary of the data we utilized for these experiments
+Forecast - where you can observe the individual prediction of each specific model against the dataset
+Compare - show the difference between each models
+
+For today presentation, we will focus primarily on the Compare tab, which you can see on the screen right now. This interface is designed to benchmark multiple models simultaneously. 
+
+As you can see from the control panel, we can select the dataset, model, horizon, and evaluation metric. We can also switch between three chart modes: non-overlapping tiles the forecast windows end-to-end so each predicted step appears exactly once, giving a clean view of the full sequence; first step shows only the closest predicted point of each window, representing best-case accuracy; and last step shows only the farthest predicted point, representing worst-case accuracy at the end of the horizon. Together these three views let you see both the overall prediction shape and how accuracy degrades over distance.
+
+Looking at the aggregate results of our experiments, we discovered a very consistent and somewhat surprising trend: the classical ARIMA model actually dominates across most of the datasets, horizon lengths, and evaluation metrics. It consistently provided highly reliable baselines that were difficult to beat
+
+However, there are a few notable exceptions where deep learning models took the lead, depending on the specific characteristics of the data.
+
+For instance, if you look at the current view for the Sunspots dataset at a horizon of 12 steps, TSMamba actually outperforms the others. As shown on our leaderboard, it achieves the best—meaning the lowest—MAE and RMSE.
+Another interesting finding occurred with the Appliances dataset. At a short horizon of 12 steps, TimeMixer achieved the absolute best performance across all four metrics.
+
+But, interestingly, as we increased the forecasting horizon, its performance gradually declined, eventually falling behind ARIMA when reaching a horizon of 48 steps.
+
+Additionally, when testing on the HanoiAirQuality dataset, TSMamba proved to be highly robust, yielding very competitive results compared to ARIMA regardless of the forecasting horizon we set.
+
+This brings us to a key question: why does ARIMA outperform more complex deep learning models?
+
+The answer comes down to data and structure. Our datasets have strong linear autoregressive patterns that ARIMA directly parametrizes through its AR and MA terms. Deep learning models are general-purpose function approximators — they need to discover this structure from examples, which is much harder with a limited training set, a short 48-step lookback, and no pre-training. In this low-data regime, added complexity becomes a liability: the models risk fitting noise rather than signal, while ARIMA's simpler form stays robust.
+
+Slide 24:
+And finally, let us wrap up with section five - Conclusion.
+
+Slide 25:
+To summarize: we built a shared pipeline for preprocessing, windowing, and evaluation across all five datasets, benchmarked five models from three families across 75 runs, and implemented everything from scratch — ARIMA and XGBoost in NumPy, the three deep models in PyTorch.
+
+On limitations: the deep learning models were not exhaustively tuned, the look-back window is a short 48 steps, and we only produce point forecasts with no uncertainty estimation. These are the clearest directions for future work.
+
+Slide 26:
+That concludes our presentation. Thank you so much for your time and attention today. We welcome any questions or feedback from the floor
